@@ -1,4 +1,4 @@
-from Ultils import model_building, detect, model_word2vec
+from Ultils import model_building, detect
 import warnings
 warnings.filterwarnings("ignore")
 import tkinter as tk
@@ -13,8 +13,7 @@ class App(tk.Tk):
         self.number = 0
         self.selected_model = 1
         self.result = []
-        self.model = model_building("Dense")
-        self.word2vec_model = model_word2vec()
+        self.model, self.word2vec_model = model_building("Dense")
 
         self.model_options = ["Model 1 (DNN)", "Model 2 (RNN)", "Model 3 (Transformer)", "Model 4 (Hybrid)"]
 
@@ -123,9 +122,9 @@ class App(tk.Tk):
         self.selected_model = (self.selected_model % len(self.model_options)) + 1
         self.model_label.config(text=self.model_options[self.selected_model-1])
         if self.selected_model == 1:
-            self.model = model_building("Dense")
+            self.model, self.word2vec_model = model_building("Dense")
         elif self.selected_model == 2:
-            pass
+            self.model, self.word2vec_model = model_building("LSTM")
         elif self.selected_model == 3:
             pass
         elif self.selected_model == 4:
@@ -170,7 +169,7 @@ class App(tk.Tk):
             insert_field = widget.winfo_children()[0]
             text = insert_field.get()
             if text.strip():
-                self.result.append(detect(text, self.model, self.word2vec_model))
+                self.result.append(detect(text, self.model, self.word2vec_model, self.selected_model))
 
         
 app = App()
