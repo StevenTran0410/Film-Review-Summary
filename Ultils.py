@@ -3,12 +3,22 @@ import re
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from gensim.models import Word2Vec
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Input, PReLU, LSTM, Masking
+from keras.models import Sequential, Model
+from keras.layers import Dense, Dropout, Input, PReLU, LSTM, Masking, BatchNormalization
 from keras.initializers import RandomUniform
 from keras_preprocessing.sequence import pad_sequences
+from transformers import TFAutoModel, BertTokenizer
+from keras import backend as K
 
 summary = ["Negative","Positive"]
+tokenizer = BertTokenizer.from_pretrained('prajjwal1/bert-tiny')
+output_indexes = np.array([i for i in range(0, 5)])
+
+def star_mae(y_true, y_pred):
+    true_star = K.sum(y_true * K.arange(0, 5, dtype="float32"), axis=-1)
+    pred_star = K.sum(y_pred * K.arange(0, 5, dtype="float32"), axis=-1)
+    mae = K.mean(K.abs(true_star - pred_star))
+    return mae
 
 def model_building(name):
     if name == "Dense":
@@ -51,7 +61,35 @@ def model_building(name):
         model.load_weights("./Weights/Sentiment Analysis RNN LSTM.h5")
         
         word2vec_model = Word2Vec.load("./Weights/word2vec_model_RNN.bin")
+    elif name == "BERT":
+        # Load pre-trained MobileBERT model
+        mobilebert_model = TFAutoModel.from_pretrained('prajjwal1/bert-tiny', from_pt=True)
 
+        # Input layers
+        input_ids = Input(shape=(400,), dtype=np.int32, name='input_ids')
+        attention_mask = Input(shape=(400,), dtype=np.int32, name='attention_mask')
+
+        # MobileBERT embeddings
+        outputs = mobilebert_model(input_ids, attention_mask=attention_mask)
+        pooled_output = outputs[0][:, 0, :]  # Extract pooled output (CLS token)
+
+        # Keras layers
+        x = BatchNormalization()(pooled_output)
+        x = Dense(128, activation='gelu')(x)
+        x = Dropout(0.2)(x)
+        x = Dense(32, activation='gelu')(x)
+
+        # Output layer
+        output = Dense(5, activation='softmax')(x)
+
+        # Create the model
+        model = Model(inputs=[input_ids, attention_mask], outputs=output)
+
+        # Compile the model
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=star_mae)
+        model.load_weights('./Weights/Sentiment Analysis Transformer.h5')  
+        
+        word2vec_model = None
             
     return model, word2vec_model
 
@@ -106,7 +144,7 @@ def clean_text(text, selected_model):
         text = ' '.join(lemmatizer.lemmatize(word) for word in text.split())
 
         return text
-    elif selected_model == 2:
+    elif selected_model == 2 or selected_model == 3:
         # Remove <br> tags
         text = re.sub(r'<br\s*/?>', ' ', text)
 
@@ -121,7 +159,7 @@ def clean_text(text, selected_model):
 
         # Remove stop words
         stop_words = set(stopwords.words('english'))
-        stop_words.update(["mr", "ms", "mrs", "dr", "film", "movie", "really", "one"])  # Add more stop words as needed                          film and movie was added due to the frequent they appear in both negative and positive
+        stop_words.update(["mr", "ms", "mrs", "dr", "film", "movie", "really", "one", "TV"])  # Add more stop words as needed                          film and movie was added due to the frequent they appear in both negative and positive
         text = ' '.join(word for word in text.split() if word.lower() not in stop_words or word.lower() == "not")
 
         # Remove 1-2 length words
@@ -132,12 +170,33 @@ def clean_text(text, selected_model):
         text = ' '.join(lemmatizer.lemmatize(word) for word in text.split())
 
         return text
+    
+def preprocessing_data(review, tokenizer):
+    encoded_dict = tokenizer.encode_plus(
+            review,
+            truncation=True,
+            max_length=400,
+            padding='max_length',
+            return_attention_mask=True,
+            return_tensors='tf'
+        )
+    
+    input_id = np.array(encoded_dict['input_ids'])
+    attention_mask = np.array(encoded_dict['attention_mask'])
+    
+    return input_id, attention_mask
 
 def detect(input, model, word2vec_model, selected_model):
     text = clean_text(input, selected_model)
-    text = word2vec(text, word2vec_model, selected_model)
-    result = np.argmax(model.predict(text))
     
-    return summary[result]
-    
+    if selected_model == 1 or selected_model == 2:
+        text = word2vec(text, word2vec_model, selected_model)
+        result = np.argmax(model.predict(text))
+        return summary[result]
+
+    elif selected_model == 3:
+        input_id, attention_mask = preprocessing_data(text, tokenizer)
+        predictions = model.predict([input_id, attention_mask])
+        start = np.round(np.sum(predictions * output_indexes, axis = 1))
+        return int(start)
     

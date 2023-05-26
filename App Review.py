@@ -15,7 +15,7 @@ class App(tk.Tk):
         self.result = []
         self.model, self.word2vec_model = model_building("Dense")
 
-        self.model_options = ["Model 1 (DNN)", "Model 2 (RNN)", "Model 3 (Transformer)", "Model 4 (Hybrid)"]
+        self.model_options = ["Model 1 (DNN)", "Model 2 (RNN)", "Model 3 (Transformer)"]
 
         self.model_frame = tk.Frame(self, background=self.from_rgb((117, 123, 129)))
         self.model_frame.place(x=0, y=0, anchor="nw", width=800, height=75)
@@ -122,13 +122,13 @@ class App(tk.Tk):
         self.selected_model = (self.selected_model % len(self.model_options)) + 1
         self.model_label.config(text=self.model_options[self.selected_model-1])
         if self.selected_model == 1:
+            self.result = []
             self.model, self.word2vec_model = model_building("Dense")
         elif self.selected_model == 2:
             self.model, self.word2vec_model = model_building("LSTM")
         elif self.selected_model == 3:
-            pass
-        elif self.selected_model == 4:
-            pass
+            self.result = []
+            self.model, self.word2vec_model = model_building("BERT")
 
     def show_summary(self):
         self.process_text()
@@ -136,24 +136,38 @@ class App(tk.Tk):
         if total_reviews == 0:
             summary_message = "Empty review"
         else:
-            results_count = Counter(self.result)
-            positive = results_count['Positive']
-            negative = results_count['Negative']
-
-            positive_percentage = (positive / total_reviews) * 100
-            negative_percentage = (negative / total_reviews) * 100
-
-            if positive_percentage > negative_percentage:
-                recommendation = "recommend"
-            else:
-                recommendation = "not recommend"
-            
-            summary_message = f"There are {positive} positive reviews and {negative} negative reviews."
-            summary_message += f" Positive reviews account for {positive_percentage:.2f}% of total reviews."
-            if positive_percentage != negative_percentage:
+            if self.selected_model == 3:
+                updated_results = [x + 1 for x in self.result]
+                average_rating = sum(updated_results) / len(updated_results)
+                
+                if average_rating >= 3.5:
+                    recommendation = "recommend"
+                elif 2 <= average_rating < 3.5:
+                    recommendation = "up to you to decide"
+                else:
+                    recommendation = "not recommend"
+                    
+                summary_message = f"The average rating is {average_rating:.2f}."
                 summary_message += f" Therefore, it is {recommendation} to watch this film/movie/anime."
             else:
-                summary_message += f" Therefore, it is up to you to decide."
+                results_count = Counter(self.result)
+                positive = results_count['Positive']
+                negative = results_count['Negative']
+
+                positive_percentage = (positive / total_reviews) * 100
+                negative_percentage = (negative / total_reviews) * 100
+
+                if positive_percentage > negative_percentage:
+                    recommendation = "recommend"
+                else:
+                    recommendation = "not recommend"
+                    
+                summary_message = f"There are {positive} positive reviews and {negative} negative reviews."
+                summary_message += f" Positive reviews account for {positive_percentage:.2f}% of total reviews."
+                if positive_percentage != negative_percentage:
+                    summary_message += f" Therefore, it is {recommendation} to watch this film/movie/anime."
+                else:
+                    summary_message += f" Therefore, it is up to you to decide."
 
         self.result_label.config(text=summary_message)
             
