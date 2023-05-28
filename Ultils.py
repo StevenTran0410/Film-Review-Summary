@@ -62,15 +62,15 @@ def model_building(name):
         
         word2vec_model = Word2Vec.load("./Weights/word2vec_model_RNN.bin")
     elif name == "BERT":
-        # Load pre-trained MobileBERT model
-        mobilebert_model = TFAutoModel.from_pretrained('prajjwal1/bert-tiny', from_pt=True)
+        # Load pre-trained tinyBERT model
+        tinybert_model = TFAutoModel.from_pretrained('prajjwal1/bert-tiny', from_pt=True)
 
         # Input layers
         input_ids = Input(shape=(400,), dtype=np.int32, name='input_ids')
         attention_mask = Input(shape=(400,), dtype=np.int32, name='attention_mask')
 
-        # MobileBERT embeddings
-        outputs = mobilebert_model(input_ids, attention_mask=attention_mask)
+        # tinyBERT embeddings
+        outputs = tinybert_model(input_ids, attention_mask=attention_mask)
         pooled_output = outputs[0][:, 0, :]  # Extract pooled output (CLS token)
 
         # Keras layers
@@ -133,7 +133,7 @@ def clean_text(text, selected_model):
 
         # Remove stop words
         stop_words = set(stopwords.words('english'))
-        stop_words.update(["mr", "ms", "mrs", "dr", "film", "movie", "really"])  # Add more stop words as needed                          film and movie was added due to the frequent they appear in both negative and positive
+        stop_words.update(["mr", "ms", "mrs", "dr", "film", "movie", "really"])  # Add more stop words as needed 
         text = ' '.join(word for word in text.split() if word not in stop_words)
 
         # Remove 1-2 length words
@@ -159,7 +159,7 @@ def clean_text(text, selected_model):
 
         # Remove stop words
         stop_words = set(stopwords.words('english'))
-        stop_words.update(["mr", "ms", "mrs", "dr", "film", "movie", "really", "one", "TV"])  # Add more stop words as needed                          film and movie was added due to the frequent they appear in both negative and positive
+        stop_words.update(["mr", "ms", "mrs", "dr", "film", "movie", "really", "one", "TV"])  # Add more stop words as needed
         text = ' '.join(word for word in text.split() if word.lower() not in stop_words or word.lower() == "not")
 
         # Remove 1-2 length words
