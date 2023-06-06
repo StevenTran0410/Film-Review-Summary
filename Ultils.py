@@ -9,6 +9,7 @@ from keras.initializers import RandomUniform
 from keras_preprocessing.sequence import pad_sequences
 from transformers import TFAutoModel, BertTokenizer
 from keras import backend as K
+from BERT_Keras import BERTTF
 
 summary = ["Negative","Positive"]
 tokenizer = BertTokenizer.from_pretrained('prajjwal1/bert-tiny')
@@ -90,6 +91,21 @@ def model_building(name):
         model.load_weights('./Weights/Sentiment Analysis Transformer.h5')  
         
         word2vec_model = None
+    elif name == "BERT2":
+        seq_len = 400
+        num_layers = 4
+        num_heads = 4
+        key_dim = 64
+        ff_dim = 320
+        dropout = 0.1
+        num_class = 5
+        vocab_size = 30522
+
+        model = BERTTF(num_layers, num_heads, seq_len, key_dim, ff_dim, vocab_size, num_class, dropout = dropout)
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=star_mae)
+        model.load_weights('./Weights/Sentiment Analysis Transformer_Build.h5')
+        
+        word2vec_model = None
             
     return model, word2vec_model
 
@@ -144,7 +160,7 @@ def clean_text(text, selected_model):
         text = ' '.join(lemmatizer.lemmatize(word) for word in text.split())
 
         return text
-    elif selected_model == 2 or selected_model == 3:
+    elif selected_model == 2 or selected_model == 3 or selected_model == 4:
         # Remove <br> tags
         text = re.sub(r'<br\s*/?>', ' ', text)
 
@@ -200,3 +216,8 @@ def detect(input, model, word2vec_model, selected_model):
         start = np.round(np.sum(predictions * output_indexes, axis = 1))
         return int(start)
     
+    elif selected_model == 4:
+        input_id, attention_mask = preprocessing_data(text, tokenizer)
+        predictions = model.predict(input_id)
+        start = np.round(np.sum(predictions * output_indexes, axis = 1))
+        return int(start)

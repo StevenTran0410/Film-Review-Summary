@@ -15,7 +15,7 @@ class App(tk.Tk):
         self.result = []
         self.model, self.word2vec_model = model_building("Dense")
 
-        self.model_options = ["Model 1 (DNN)", "Model 2 (RNN)", "Model 3 (Transformer)"]
+        self.model_options = ["Model 1 (DNN)", "Model 2 (RNN)", "Model 3 (Transformer)", "Model 4 (BERTOwnBuild)"]
 
         self.model_frame = tk.Frame(self, background=self.from_rgb((117, 123, 129)))
         self.model_frame.place(x=0, y=0, anchor="nw", width=800, height=75)
@@ -129,6 +129,8 @@ class App(tk.Tk):
         elif self.selected_model == 3:
             self.result = []
             self.model, self.word2vec_model = model_building("BERT")
+        elif self.selected_model == 4:
+            self.model, self.word2vec_model = model_building("BERT2")
 
     def show_summary(self):
         self.process_text()
@@ -136,7 +138,7 @@ class App(tk.Tk):
         if total_reviews == 0:
             summary_message = "Empty review"
         else:
-            if self.selected_model == 3:
+            if self.selected_model == 3 or self.selected_model == 4:
                 updated_results = [x + 1 for x in self.result]
                 average_rating = sum(updated_results) / len(updated_results)
                 
